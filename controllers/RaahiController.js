@@ -1,5 +1,5 @@
 const { GoogleGenAI } = require("@google/genai");
-const RaahiItent = require("./RaahiIntent");
+const RaahiIntent = require("./services/RaahiIntent");
 const RaahiRetriever = require("./services/RaahiRetriever");
 const ContextBuilder = require("./services/ContextBuilder");
 const RaahiGenerator = require("./services/RaahiGenerator");
@@ -17,7 +17,7 @@ const RaahiAI = async (req, res) => {
 
         // 1. Intent Detection
 
-        const intent = await RaahiItent(question);
+        const intent = await RaahiIntent(question);
 
         // console.log(intent);
 
@@ -38,9 +38,12 @@ const RaahiAI = async (req, res) => {
             context
         )
 
+        // console.log("========== AI ANSWER ==========");
+        // console.log(answer);
+
         res.json({
             success: true,
-            data:JSON.parse(answer)
+            data:answer
         })
 
         

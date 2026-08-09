@@ -5,7 +5,7 @@ const travelAI = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });
 
-const RaahiItent = async (question) => {
+const RaahiIntent = async (question) => {
 
     const prompt = `
     
@@ -79,26 +79,26 @@ Rules:
 
     } catch (err) {
 
-     console.log("JSON parse failed:", result.text)
+        console.log("JSON parse failed:", result.text)
 
-        aiResponse = {
-        intent: "general_question",
-        entities: {
-            destination: "",
-            city: "",
-            location: "",
-            budget: "",
-            days: "",
-            traveller_type: "",
-            occasion: "",
-            month: "",
-            food_preference: "",
-            hotel_preference: ""
-        }
-    };
+        return {
+            intent: "general_question",
+            entities: {
+                destination: "",
+                city: "",
+                location: "",
+                budget: "",
+                days: "",
+                traveller_type: "",
+                occasion: "",
+                month: "",
+                food_preference: "",
+                hotel_preference: ""
+            }
+        };
 
     }
 
 }
 
-module.exports = RaahiItent;
+module.exports = RaahiIntent;
