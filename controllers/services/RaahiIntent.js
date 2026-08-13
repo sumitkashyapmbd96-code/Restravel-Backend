@@ -9,9 +9,13 @@ const RaahiIntent = async (question) => {
 
     const prompt = `
     
-    You are a intent classifier for travel application.
+    You are an intelligent intent classifier for a travel application.
 
-    Analyze user query.
+    Your job is to understand the USER'S INTENTION, not just match keywords.
+
+    The user can ask anything related to travel using natural language.
+    Do not reject a query because its wording is unusual.
+
 
     Return JSON only.
 

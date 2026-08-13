@@ -1,13 +1,8 @@
-const { GoogleGenAI } = require("@google/genai");
 const RaahiIntent = require("./services/RaahiIntent");
 const RaahiRetriever = require("./services/RaahiRetriever");
 const ContextBuilder = require("./services/ContextBuilder");
 const RaahiGenerator = require("./services/RaahiGenerator");
 
-const travelAI = new GoogleGenAI({
-
-    apiKey: process.env.GEMINI_API_KEY
-});
 
 const RaahiAI = async (req, res) => {
 
@@ -15,11 +10,21 @@ const RaahiAI = async (req, res) => {
 
         const { question } = req.body
 
+        if (!question || !question.trim()) {
+
+            return res.status(400).json({
+
+                success: false,
+
+                message: "Question is required."
+            });
+        }
+
         // 1. Intent Detection
 
-        const intent = await RaahiIntent(question);
+        const intent = await RaahiIntent(question.trim());
 
-        // console.log(intent);
+        // console.log(intent)
 
         // 2. Retrieve Data from MongoDB
 
@@ -27,32 +32,32 @@ const RaahiAI = async (req, res) => {
 
         // console.log(data);
 
-         // 3. Build Context for LLM
+        // 3. Build Context for LLM
 
         const context = ContextBuilder(data)
 
         // console.log("Context:", context)
 
         const answer = await RaahiGenerator(
-            question,
+            question.trim(),
             context
         )
 
         // console.log("========== AI ANSWER ==========");
         // console.log(answer);
 
-        res.json({
+        return res.status(200).json({
             success: true,
-            data:answer
+            data: answer
         })
 
-        
-        
+
+
 
     } catch (err) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: err.message
+            message: "Raahi AI service temporarily unavailable."
         })
     }
 }
