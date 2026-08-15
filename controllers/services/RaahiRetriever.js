@@ -84,9 +84,6 @@ const RaahiRetriever = async (intent) => {
 
 
             // Location / Landmark
-            //
-            // Example:
-            // "Mall Road ke paas hotel"
 
             if (entity.location) {
 
@@ -98,9 +95,6 @@ const RaahiRetriever = async (intent) => {
 
 
             // Budget
-            //
-            // Example:
-            // "5000 ke andar hotel"
 
             if (budget !== null) {
 
@@ -111,9 +105,6 @@ const RaahiRetriever = async (intent) => {
 
 
             // Hotel preference
-            //
-            // Example:
-            // "Nainital me resort batao"
 
             if (entity.hotel_preference) {
 
@@ -196,10 +187,6 @@ const RaahiRetriever = async (intent) => {
 
 
             // Food preference
-            //
-            // NOTE:
-            // Ye tabhi work karega agar FoodMenu
-            // mein "category" field available hai.
 
             if (entity.food_preference) {
 
@@ -218,18 +205,12 @@ const RaahiRetriever = async (intent) => {
                 .limit(20);
 
 
-            // Destination filtering
             const filteredFoods = foods.filter((item) => {
-
-                // Agar destination mention nahi hai
-                // toh saare retrieved foods allow karo.
 
                 if (!destination) {
                     return true;
                 }
 
-
-                // Restaurant missing hai
                 if (
                     !item.restaurant ||
                     !item.restaurant.city

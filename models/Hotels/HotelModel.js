@@ -56,15 +56,16 @@ const hotelSchema = new mongoose.Schema({
         maxlength: 500
     },
 
-    embedding: {
-    type: [Number],
-    default: []
-},
+//     embedding: {
+//     type: [Number],
+//     default: []
+// },
 
     hotelImages: {
         type: [
             {
                 filename: String,
+                key: String,
                 url: String
             }
         ],

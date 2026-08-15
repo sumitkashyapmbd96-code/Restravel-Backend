@@ -7,11 +7,6 @@ const travelAI = new GoogleGenAI({
 
 const RaahiGenerator = async (question, context) => {
 
-    // console.log("========== GENERATOR DEBUG ==========");
-    // console.log("Question:", question);
-    // console.log("Context:", JSON.stringify(context, null, 2));
-    // console.log("=====================================");
-
     const prompt = `
     
     You are Raahi AI, the travel assistant for RESTRAVEL.

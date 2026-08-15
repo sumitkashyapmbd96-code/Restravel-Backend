@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const Hotel = require('../../models/Hotels/HotelModel');
 const { count } = require('console');
+const { uploadToS3, deleteFromS3, getSignedImageUrl } = require('../services/s3Service');
 
 // ================= ADD HOTEL =================
 
@@ -44,12 +45,20 @@ const AddHotel = async (req, res) => {
 
         // hotel images handling
 
-        const hotelImages = req.files["hotelImages"]
-            ? req.files["hotelImages"].map(file => ({
-                filename: file.filename,
-                url: file.path
-            }))
-            : [];
+        const hotelImages = [];
+
+        if (req.files?.hotelImages) {
+
+            for (const file of req.files.hotelImages) {
+                const uploaded = await uploadToS3(file, "hotels");
+
+                hotelImages.push({
+                    filename: uploaded.fileName,
+                    key: uploaded.key,
+                    url: uploaded.url
+                })
+            }
+        }
 
         // create new hotel
 
@@ -89,7 +98,28 @@ const AddHotel = async (req, res) => {
 const getHotel = async (req, res) => {
     try {
 
-        const hotels = await Hotel.find().sort({ createdAt: -1 })
+        const hotels = await Hotel.find()
+            .sort({ createdAt: -1 })
+            .lean();
+
+        for (const hotel of hotels) {
+
+            if (hotel.hotelImages?.length > 0) {
+
+                for (const image of hotel.hotelImages) {
+
+                    if (image.key) {
+
+                        image.url = await getSignedImageUrl(image.key);
+
+                    }
+
+                }
+
+            }
+
+        }
+
 
         res.status(200).json({
             success: true,
@@ -106,11 +136,27 @@ const getHotel = async (req, res) => {
 // ================= GET MY HOTELS =================
 
 const getMyHotels = async (req, res) => {
+
     try {
 
         const userId = req.user.id;
 
-        const hotels = await Hotel.find({ user: userId }).sort({ createdAt: -1 });
+        const hotels = await Hotel.find({ user: userId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        for (const hotel of hotels) {
+
+            if (hotel.hotelImages?.length > 0) {
+                for (const image of hotel.hotelImages) {
+                    if (image.key) {
+                        image.url = await getSignedImageUrl(image.key);
+                    }
+                }
+
+            }
+
+        }
 
         res.status(200).json({
             success: true,
@@ -146,12 +192,24 @@ const DeleteHotels = async (req, res) => {
 
         // delete image safety
 
-        if (deleteHotels.hotelImages.length > 0) {
-            deleteHotels.hotelImages.forEach(img => {
-                if (img.url && fs.existsSync(img.url)) {
-                    fs.unlinkSync(img.url);
+        if (deleteHotels.hotelImages?.length > 0) {
+            for (const img of deleteHotels.hotelImages) {
+                if (img.key) {
+                    try {
+                        await deleteFromS3(img.key);
+
+                        console.log(
+                            "S3 Images Deleted",
+                            img.key
+                        );
+                    } catch (s3Err) {
+                        console.log(
+                            "S3 delete error:",
+                            s3Err.message
+                        );
+                    }
                 }
-            });
+            }
         }
 
         // Delete Video
@@ -219,25 +277,51 @@ const UpdateHotels = async (req, res) => {
 
         // image update
 
-        let images = hotel.hotelImages;
+        let images = hotel.hotelImages || [];
 
-        if (req.files?.hotelImages) {
-            hotel.hotelImages.forEach(img => {
-                if (img.url && fs.existsSync(img.url)) {
+        // If new images uploaded
+        if (req.files?.hotelImages?.length > 0) {
+
+            // Delete old S3 images
+            for (const img of images) {
+
+                if (img.key) {
+
                     try {
-                        fs.unlinkSync(img.url);
-                    } catch (err) {
-                        console.log(err);
+
+                        await deleteFromS3(img.key);
+
+                        console.log(
+                            "Old S3 image deleted:",
+                            img.key
+                        );
+
+                    } catch (error) {
+
+                        console.log(
+                            "Old S3 image delete error:",
+                            error.message
+                        );
                     }
                 }
-            });
+            }
 
-            // new images
+            // Upload new images to S3
+            images = [];
 
-            images = req.files.hotelImages.map(file => ({
-                filename: file.filename,
-                url: file.path
-            }));
+            for (const file of req.files.hotelImages) {
+
+                const uploaded = await uploadToS3(
+                    file,
+                    "hotels"
+                );
+
+                images.push({
+                    filename: uploaded.fileName,
+                    key: uploaded.key,
+                    url: uploaded.url
+                });
+            }
         }
 
         // video
@@ -264,7 +348,7 @@ const UpdateHotels = async (req, res) => {
                 description,
                 hotelImages: images,
                 // hotelVideo: video
-            }, { returnDocument: 'after'}
+            }, { returnDocument: 'after' }
         )
 
         res.status(200).json({
