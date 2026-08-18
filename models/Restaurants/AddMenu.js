@@ -41,6 +41,7 @@ const menuSchema = new mongoose.Schema({
         type: [
             {
                 filename: String,
+                key: String,
                 url: String
             }
         ],

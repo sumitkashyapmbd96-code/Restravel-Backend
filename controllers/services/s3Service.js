@@ -44,11 +44,11 @@ const uploadToS3 = async (file, folder = "images") => {
         `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
 
-    console.log("========== S3 UPLOAD ==========");
-    console.log("Bucket:", BUCKET_NAME);
-    console.log("Key:", key);
-    console.log("URL:", url);
-    console.log("================================");
+    // console.log("========== S3 UPLOAD ==========");
+    // console.log("Bucket:", BUCKET_NAME);
+    // console.log("Key:", key);
+    // console.log("URL:", url);
+    // console.log("================================");
 
 
     return {

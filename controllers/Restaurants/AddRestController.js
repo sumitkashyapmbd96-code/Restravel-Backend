@@ -1,4 +1,5 @@
 const AddRestaurent = require('../../models/Restaurants/AddRestaurent');
+const { uploadToS3, getSignedImageUrl } = require('../services/s3Service');
 
 // ================= Add Restaurants =================
 
@@ -51,10 +52,19 @@ const addRestaurant = async (req, res) => {
 
         // file maping
 
-        const images = req.files.map(file => ({
-            filename: file.filename,
-            url: `/uploads/images/${file.filename}`
-        }));
+        const images = [];
+
+        if (req.files?.length > 0) {
+            for (const file of req.files) {
+                const uploaded = await uploadToS3(file, "restaurants");
+
+                images.push({
+                    filename: uploaded.fileName,
+                    key: uploaded.key,
+                    url: uploaded.url
+                })
+            }
+        } 
 
         const newRestaurent = new AddRestaurent({
 
@@ -88,7 +98,27 @@ const getRest = async (req, res) => {
 
     try {
 
-        const restaurants = await AddRestaurent.find().sort({ createdAt: -1 })
+        const restaurants = await AddRestaurent.find()
+        .sort({ createdAt: -1 })
+        .lean();
+
+        for (const restaurant of restaurants) {
+
+            if (restaurant.images?.length > 0) {
+
+                for (const image of restaurant.images) {
+
+                    if (image.key) {
+
+                        image.url = await getSignedImageUrl(image.key);
+
+                    }
+
+                }
+
+            }
+
+        }
 
         res.status(200).json({
             success: true,

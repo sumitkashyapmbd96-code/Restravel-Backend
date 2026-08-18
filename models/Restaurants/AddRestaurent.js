@@ -7,6 +7,11 @@ const imageSchema = new mongoose.Schema({
         required: true
     },
 
+    key: {
+        type: String,
+        required: true
+    },
+
     url: {
         type: String,
         required: true

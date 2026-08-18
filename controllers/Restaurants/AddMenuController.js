@@ -2,6 +2,11 @@ const fs = require('fs')
 const path = require('path')
 const FoodMenu = require("../../models/Restaurants/AddMenu");
 const AddRestaurent = require('../../models/Restaurants/AddRestaurent');
+const {
+    uploadToS3,
+    deleteFromS3,
+    getSignedImageUrl
+} = require("../services/s3Service");
 
 // ================= Add Menu =================
 
@@ -41,12 +46,23 @@ const AddMenu = async (req, res) => {
             return res.status(403).json({ message: "Unauthorized" });
         }
 
-        const foodImages = req.files["foodImages"]
-            ? req.files["foodImages"].map(file => ({
-                filename: file.filename,
-                url: file.path
-            }))
-            : [];
+        const foodImages = [];
+
+        if (req.files?.foodImages) {
+            for (const file of req.files.foodImages) {
+
+                const uploaded = await uploadToS3(
+                    file,
+                    "food-images"
+                );
+
+                foodImages.push({
+                    filename: uploaded.fileName,
+                    key: uploaded.key,
+                    url: uploaded.url
+                });
+            }
+        }
 
         // video handling
 
@@ -96,6 +112,18 @@ const getAllFood = async (req, res) => {
         const foods = await FoodMenu.find()
             .populate("restaurant", "restaurantname city")
             .sort({ createdAt: -1 })
+            .lean();
+
+        for (const food of foods) {
+
+            if (food.foodImages?.length > 0) {
+                for (const image of food.foodImages) {
+                    if (image.key) {
+                        image.url = await getSignedImageUrl(image.key);
+                    }
+                }
+            }
+        }
 
         res.status(200).json({
             success: true,
@@ -147,22 +175,52 @@ const UpdateMenu = async (req, res) => {
 
         // image handling
 
-        let images = foodMenu.foodImages;
+        let images = foodMenu.foodImages || [];
 
-        if (req.files?.foodImages) {
+        if (req.files?.foodImages?.length > 0) {
 
             // delete old images
 
-            images.forEach(img => {
-                if (img.url && fs.existsSync(img.url)) {
-                    fs.unlinkSync(img.url)
-                }
-            })
+            for (const img of images) {
 
-            images = req.files.foodImages.map(file => ({
-                filename: file.filename,
-                url: file.path
-            }));
+                if (img.key) {
+
+                    try {
+
+                        await deleteFromS3(img.key);
+
+                        console.log(
+                            "Old S3 image deleted:",
+                            img.key
+                        );
+
+                    } catch (error) {
+
+                        console.log(
+                            "Old S3 image delete error:",
+                            error.message
+                        );
+                    }
+                }
+            }
+
+            // Upload new images to S3
+
+            images = [];
+
+            for (const file of req.files.foodImages) {
+
+                const uploaded = await uploadToS3(
+                    file,
+                    "food-images"
+                );
+
+                images.push({
+                    filename: uploaded.fileName,
+                    key: uploaded.key,
+                    url: uploaded.url
+                });
+            }
         }
 
         // video handling
@@ -214,6 +272,10 @@ const DeleteMenu = async (req, res) => {
 
         const { id } = req.params;
 
+        console.log("========== DELETE FOOD ==========");
+        console.log("Food ID:", id);
+        console.log("Logged User:", req.user.id);
+
         const foodMenu = await FoodMenu.findById(id);
 
         if (!foodMenu) {
@@ -224,19 +286,34 @@ const DeleteMenu = async (req, res) => {
 
         const restaurantData = await AddRestaurent.findById(foodMenu.restaurant)
 
-        if (restaurantData.user.toString() !== req.user.id) {
+        if (restaurantData.user.toString() !== req.user.id.toString()) {
             return res.status(403).json({ message: "Unauthorized" })
         }
 
 
-
         // delete image
-        if (foodMenu.foodImages.length > 0) {
-            foodMenu.foodImages.forEach(img => {
-                if (img.url && fs.existsSync(img.url)) {
-                    fs.unlinkSync(img.url);
+        if (foodMenu.foodImages?.length > 0) {
+
+            for (const img of foodMenu.foodImages) {
+                if (img.key) {
+                    try {
+                        console.log(
+                            "Deleting S3 image:",
+                            img.key
+                        );
+                        await deleteFromS3(img.key);
+                        console.log(
+                            "S3 image deleted successfully:",
+                            img.key
+                        );
+                    } catch (s3Err) {
+                        console.log(
+                            "S3 delete error:",
+                            s3Err.message
+                        );
+                    }
                 }
-            });
+            }
         }
 
         // Delete Video
